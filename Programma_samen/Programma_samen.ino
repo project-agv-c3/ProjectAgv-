@@ -226,9 +226,12 @@ void stepperechts() {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ISR(TIMER1_COMPA_vect) {
 rijden();
 =======
+=======
+>>>>>>> 55e71214b5f08b70a279a5ba5b18d046af15e20e
 void ToFs_init() {
   //Reset de ToFs door de voedingen laag te maken
   digitalWrite(TOF_PIN1, LOW);
@@ -277,5 +280,8 @@ void ToFs_init() {
 
 ISR(TIMER1_COMPA_vect) {
 
+<<<<<<< HEAD
+>>>>>>> 55e71214b5f08b70a279a5ba5b18d046af15e20e
+=======
 >>>>>>> 55e71214b5f08b70a279a5ba5b18d046af15e20e
 }
