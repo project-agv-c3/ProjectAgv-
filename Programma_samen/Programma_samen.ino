@@ -109,6 +109,7 @@ void loop() {
   ToF();
   stepperlinks();
   stepperrechts();
+  rijden();
 }
 
 void sonar() {
@@ -240,8 +241,4 @@ void ToFs_init() {
   ToF2.init();
   ToF2.setAddress(TOF4);
   ToF2.setTimeout(MAX_TOF);
-}
-
-ISR(TIMER1_COMPA_vect) {
-
 }
