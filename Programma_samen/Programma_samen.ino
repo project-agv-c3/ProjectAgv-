@@ -109,7 +109,6 @@ void loop() {
   ToF();
   stepperlinks();
   stepperrechts();
-  rijden();
 }
 
 void sonar() {
