@@ -52,7 +52,6 @@ uint8_t distancesonar4 = 0;
 
 //Globale integers voor statussen
 uint8_t sensornummer = 0;
-uint8_t rijtype = 0;
 boolean statusStepperLinks = false;
 boolean statusStepperRechts = false;
 boolean richtingStepperLinks = true;
@@ -70,7 +69,6 @@ unsigned long previousMillisStepperRechts = 0;
 int16_t intervalStepperLinks = 15;
 int16_t intervalStepperRechts = 15;
 #define intervalLaagzetten 1
-
 
 void setup() {
   Serial.begin(9600);   //Start een seriele verbinding met de computer voor debugging
@@ -109,8 +107,8 @@ void loop() {
   //updaten sensoren
   sonar();
   ToF();
-  rijtype = 0;
-  rijden();
+  stepperlinks();
+  stepperrechts();
 }
 
 void sonar() {
@@ -150,34 +148,6 @@ void ToF() {
   }
 }
 
-void rijden() {
-  switch (rijtype) {
-    case 0: //vooruit
-      digitalWrite(dirPinRechts, HIGH);
-      digitalWrite(dirPinLinks, HIGH);
-      stepperlinks();
-      stepperechts();
-      break;
-    case 1: //achteruit
-      digitalWrite(dirPinRechts, LOW);
-      digitalWrite(dirPinLinks, LOW);
-      stepperlinks();
-      stepperechts();
-      break;
-    case 2: //links
-      digitalWrite(dirPinRechts, HIGH);
-      digitalWrite(dirPinRechts, HIGH);
-      break;
-    case 3: //rechts
-      digitalWrite(dirPinLinks, HIGH);
-      digitalWrite(dirPinLinks, HIGH);
-
-      break;
-  }
-}
-
-
-
 void stepperlinks() {
   if (intervalStepperLinks != 0) {
     if ((intervalStepperLinks < 0) == richtingStepperLinks) {
@@ -202,7 +172,7 @@ void stepperlinks() {
   }
 }
 
-void stepperechts() {
+void stepperrechts() {
   if (intervalStepperRechts != 0) {
     if ((intervalStepperRechts < 0) == richtingStepperRechts) {
       richtingStepperRechts != richtingStepperRechts;
