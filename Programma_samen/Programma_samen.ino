@@ -6,12 +6,17 @@
 //initialisatie ToF
 VL53L0X ToF1;
 VL53L0X ToF2;
+VL53L0X ToF3;
+VL53L0X ToF4;
 
+//maximale distance sonar
 #define MAX_DISTANCE 400
 
 //pin aansluitingen
 #define ToF_voeding1 8                                            //aangesloten voeding tof1
 #define ToF_voeding2 9                                            //aangesloten voeding tof2
+#define ToF_voeding3 6
+#define ToF_voeding4 7
 #define stepPinLinks 13                                           //aangesloten step pin
 #define dirPinLinks 12                                            //aangesloten dir pin
 #define stepPinRechts A1                                          //aangesloten step pin
@@ -28,6 +33,8 @@ NewPing sonar4(PING_PIN_4, PING_PIN_4, MAX_DISTANCE);             // NewPing set
 //global integers sensoren afstanden
 uint8_t distanceToF1 = 0;
 uint8_t distanceToF2 = 0;
+uint8_t distanceToF3 = 0;
+uint8_t distanceToF4 = 0;
 uint8_t distancesonar1 = 0;
 uint8_t distancesonar2 = 0;
 uint8_t distancesonar3 = 0;
@@ -58,28 +65,51 @@ void setup() {
 
   pinMode(ToF_voeding1, OUTPUT);
   pinMode(ToF_voeding2, OUTPUT);
+  pinMode(ToF_voeding3, OUTPUT);
+  pinMode(ToF_voeding4, OUTPUT);
 
   //reset ToF door voeding te stoppen
   digitalWrite(ToF_voeding1, LOW);
   digitalWrite(ToF_voeding2, LOW);
-  delay(100);
+  digitalWrite(ToF_voeding3, LOW);
+  digitalWrite(ToF_voeding4, LOW);
+  delay(10);
 
   //start ToF door voeding te geven
   digitalWrite(ToF_voeding1, HIGH);
   digitalWrite(ToF_voeding2, HIGH);
-  delay(100);
+  digitalWrite(ToF_voeding3, HIGH);
+  digitalWrite(ToF_voeding4, HIGH);
+  delay(10);
 
   //nieuw adres aan tof1
   digitalWrite(ToF_voeding2, LOW);
-  delay(100);
+  digitalWrite(ToF_voeding3, LOW);
+  digitalWrite(ToF_voeding4, LOW);
+  delay(10);
   ToF1.init();
   ToF1.setAddress(0x30);
   ToF1.setTimeout(500);
 
   //nieuw adres aan tof2
   digitalWrite(ToF_voeding2, HIGH);
+  delay(10);
   ToF2.init();
   ToF2.setAddress(0x31);
+  ToF2.setTimeout(500);
+
+  //nieuw adres aand Tof3
+  digitalWrite(ToF_voeding3, HIGH);
+  delay(10);
+  ToF2.init();
+  ToF2.setAddress(0x32);
+  ToF2.setTimeout(500);
+
+  //nieuw adres aan ToF4
+  digitalWrite(ToF_voeding4, HIGH);
+  delay(10);
+  ToF2.init();
+  ToF2.setAddress(0x33);
   ToF2.setTimeout(500);
 
   //stepper pins als output zetten
@@ -129,6 +159,8 @@ void ToF() {
     previousMillisToF = millis();
     distanceToF1 = ToF1.readRangeSingleMillimeters();
     distanceToF2 = ToF2.readRangeSingleMillimeters();
+    distanceToF3 = ToF3.readRangeSingleMillimeters();
+    distanceToF4 = ToF4.readRangeSingleMillimeters();
   }
 }
 void rijden() {
