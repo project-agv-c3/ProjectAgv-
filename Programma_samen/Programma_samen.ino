@@ -85,7 +85,7 @@ void setup() {
   pinMode(dirPinRechts, OUTPUT);
 
   ToFs_init();          //Initializeer de time of flight sensoren
-
+/*
   //Interrupt service routine aanzetten
   //set timer1 interrupt at 1Hz
   TCCR1A = 0;// set entire TCCR1A register to 0
@@ -101,6 +101,7 @@ void setup() {
   TIMSK1 |= (1 << OCIE1A);
 
   sei();
+  */
 }
 
 void loop() {
