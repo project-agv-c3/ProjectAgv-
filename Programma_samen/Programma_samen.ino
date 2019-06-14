@@ -19,10 +19,10 @@ VL53L0X ToF4;
 #define TOF_PIN2 9
 #define TOF_PIN3 6
 #define TOF_PIN4 7
-#define stepPinLinks 13         //De vier aansluitingen voor de stepper drivers (twee per motor)
-#define dirPinLinks 12
-#define stepPinRechts A1
-#define dirPinRechts A0
+#define stepPinLinks A1         //De vier aansluitingen voor de stepper drivers (twee per motor)
+#define dirPinLinks A0
+#define stepPinRechts 13
+#define dirPinRechts 12
 #define PING_PIN1 2             //De vier aansluitingen voor de ultrasone sensoren (één per sensor)
 #define PING_PIN2 3
 #define PING_PIN3 4
@@ -54,8 +54,13 @@ uint8_t distancesonar4 = 0;
 uint8_t sensornummer = 0;
 boolean statusStepperLinks = false;
 boolean statusStepperRechts = false;
-boolean richtingStepperLinks = true;
-boolean richtingStepperRechts = true;
+boolean richtingStepperLinks = false;
+boolean richtingStepperRechts = false;
+
+long positieLinks = 0;
+long positieRechts = 0;
+#define CORNER_STEPS 340
+int done = 0;
 
 //variabele millis
 unsigned long previousMillisToF = 0;
@@ -70,6 +75,8 @@ int16_t intervalStepperLinks = 15;
 int16_t intervalStepperRechts = 15;
 #define intervalLaagzetten 1
 
+uint8_t state = 0;
+
 void setup() {
   Serial.begin(9600);   //Start een seriele verbinding met de computer voor debugging
   Wire.begin();         //Start de I2C comunicatie
@@ -83,6 +90,8 @@ void setup() {
   pinMode(dirPinLinks, OUTPUT);
   pinMode(stepPinRechts, OUTPUT);
   pinMode(dirPinRechts, OUTPUT);
+
+  state = 1;
 
   ToFs_init();          //Initializeer de time of flight sensoren
 /*
@@ -108,8 +117,34 @@ void loop() {
   //updaten sensoren
   sonar();
   ToF();
-  stepperlinks();
-  stepperrechts();
+  switch (state) {
+    case 1:
+      positieLinks = 0;
+      positieRechts = 0;
+      intervalStepperLinks = 2;
+      intervalStepperRechts = 2;
+      done = 0;
+      state = 2;
+      break;
+    case 2:
+      if (positieLinks == 1000) {
+        intervalStepperLinks = 0;
+        done++;
+      }
+      if (positieRechts == 1000) {
+        intervalStepperRechts = 0;
+        done++;
+      }
+      if (done >= 2) {
+        state = 3;
+      }
+      break;
+    default:
+      //Nothing
+      break;
+  }
+  stepperLinks();
+  stepperRechts();
 }
 
 void sonar() {
@@ -149,18 +184,23 @@ void ToF() {
   }
 }
 
-void stepperlinks() {
+void stepperLinks() {
   if (intervalStepperLinks != 0) {
-    if ((intervalStepperLinks < 0) == richtingStepperLinks) {
-      richtingStepperLinks != richtingStepperLinks;
+    if ((intervalStepperLinks > 0) != richtingStepperLinks) {
+      richtingStepperLinks = !richtingStepperLinks;
       digitalWrite(dirPinLinks, richtingStepperLinks);
     }
-    if (millis() - previousMillisStepperLinks >= intervalStepperLinks && statusStepperLinks == false) {
+    if (millis() - previousMillisStepperLinks >= abs(intervalStepperLinks) && statusStepperLinks == false) {
+      if (intervalStepperLinks < 0) {
+        positieLinks--;
+      } else {
+        positieLinks++;
+      }
       digitalWrite(stepPinLinks, HIGH);
       previousMillisStepperLinks = millis();
       statusStepperLinks = true;
     }
-    if (millis() - intervalLaagzetten >= intervalStepperLinks && statusStepperLinks == true) {
+    if (millis() - intervalLaagzetten >= abs(intervalStepperLinks) && statusStepperLinks == true) {
       digitalWrite(stepPinLinks, LOW);
       previousMillisStepperLinks = millis();
       statusStepperLinks = false;
@@ -173,19 +213,24 @@ void stepperlinks() {
   }
 }
 
-void stepperrechts() {
+void stepperRechts() {
   if (intervalStepperRechts != 0) {
-    if ((intervalStepperRechts < 0) == richtingStepperRechts) {
-      richtingStepperRechts != richtingStepperRechts;
+    if ((intervalStepperRechts > 0) != richtingStepperRechts) {
+      richtingStepperRechts = !richtingStepperRechts;
       digitalWrite(dirPinRechts, richtingStepperRechts);
     }
-    if (millis() - previousMillisStepperRechts >= intervalStepperRechts && statusStepperRechts == false) {
-      digitalWrite(stepPinLinks, HIGH);
+    if (millis() - previousMillisStepperRechts >= abs(intervalStepperRechts) && statusStepperRechts == false) {
+      if (intervalStepperRechts < 0) {
+        positieRechts--;
+      } else {
+        positieRechts++;
+      }
+      digitalWrite(stepPinRechts, HIGH);
       previousMillisStepperRechts = millis();
       statusStepperRechts = true;
     }
-    if (millis() - intervalLaagzetten >= intervalStepperRechts && statusStepperRechts == true) {
-      digitalWrite(stepPinLinks, LOW);
+    if (millis() - intervalLaagzetten >= abs(intervalStepperRechts) && statusStepperRechts == true) {
+      digitalWrite(stepPinRechts, LOW);
       previousMillisStepperRechts = millis();
       statusStepperRechts = false;
     }
