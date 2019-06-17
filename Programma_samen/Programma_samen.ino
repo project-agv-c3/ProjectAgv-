@@ -73,6 +73,7 @@ boolean statusStepperLinks = false;
 boolean statusStepperRechts = false;
 boolean richtingStepperLinks = false;
 boolean richtingStepperRechts = false;
+boolean Timer = false;
 
 long positieLinks = 0;
 long positieRechts = 0;
@@ -116,23 +117,22 @@ void setup() {
   state = 1;
 
   ToFs_init();          //Initializeer de time of flight sensoren
-  /*
-    //Interrupt service routine aanzetten
-    //set timer1 interrupt at 1Hz
-    TCCR1A = 0;// set entire TCCR1A register to 0
-    TCCR1B = 0;// same for TCCR1B
-    TCNT1  = 0;//initialize counter value to 0
-    // set compare match register for 1hz increments
-    OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
-    // turn on CTC mode
-    TCCR1B |= (1 << WGM12);
-    // Set CS12 and CS10 bits for 1024 prescaler
-    TCCR1B |= (1 << CS12) | (1 << CS10);
-    // enable timer compare interrupt
-    TIMSK1 |= (1 << OCIE1A);
 
-    sei();
-  */
+  //Interrupt service routine aanzetten
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0;// set entire TCCR1A register to 0
+  TCCR1B = 0;// same for TCCR1B
+  TCNT1  = 0;//initialize counter value to 0
+  // set compare match register for 5hz increments
+  OCR1A = 3124;// = (16*10^6) / (5*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS12 and CS10 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  sei();
+
 }
 
 void loop() {
@@ -140,6 +140,7 @@ void loop() {
     //updaten sensoren
     sonar();
     ToF();
+
     switch (state) {
       case 1:
         positieLinks = 0;
@@ -166,8 +167,14 @@ void loop() {
         //Nothing
         break;
     }
-    stepperLinks();
-    stepperRechts();
+
+    if (Timer == true) {
+      stepperLinks();
+      stepperRechts();
+      Timer = false;
+    }
+
+
     if (analogRead(VOLTAGE_PIN) <= 10) {
       emergency = true;
     }
@@ -176,9 +183,10 @@ void loop() {
       emergency = false;
     }
   }
-  if (btState == CONNECTED) {
 
-  } else {
+  if (btState == CONNECTED) {
+  }
+  else {
     if (bluetooth.available()) {
       if (btState == NOT_CONNECTED) {
         if (bluetooth.read() == INIT_DATA) {
@@ -348,4 +356,8 @@ void ToFs_init() {
   ToF2.init();
   ToF2.setAddress(TOF4);
   ToF2.setTimeout(MAX_TOF);
+}
+
+ISR(TIMER1_COMPA_vect) { //timer1 interrupt service routine
+  Timer = true;
 }
