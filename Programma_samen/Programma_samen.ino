@@ -67,6 +67,10 @@ uint8_t distancesonar3 = 0;
 uint8_t distancesonar4 = 0;
 uint8_t gemiddeldeWaarde = 0;
 
+//globale integers voor vaste afstanden
+uint8_t afstandPad = 50;
+uint8_t afstandSonarVoor = 15;
+
 //Globale integers voor statussen
 uint8_t sonarNummer = 0;
 uint8_t tofNummer = 0;
@@ -125,63 +129,72 @@ void loop() {
     sonar();
     ToF();
 
-    if (distanceToF3 < gemiddeldeWaarde) {
-      state = 2;
-    }
-
-    if (distanceToF4 < gemiddeldeWaarde) {
+    if (gemiddeldeWaarde < afstandPad && distancesonar1 > afstandSonarVoor) {
       state = 3;
     }
 
+    
+    if (distancesonar1 < afstandSonarVoor) {
+      state = 2;
+    }
+
+
     switch (state) {
-      case 1:
+      case 1: //initialisatie
         positieLinks = 0;
         positieRechts = 0;
         intervalStepperLinks = 4;
         intervalStepperRechts = 4;
         done = 0;
-        //    state = 2;
+        state = 3;
         break;
-      case 2:
-        intervalStepperLinks = 4;
-        intervalStepperRechts = 2;
+      case 2: //stilstaan
+        intervalStepperLinks = 0;
+        intervalStepperRechts = 0;
         break;
-      case 3:
-        intervalStepperLinks = 2;
-        intervalStepperRechts = 4;
-        break;
-      default:
-        //Nothing
-        break;
-    }
-    stepperLinks();
-    stepperRechts();
-
-    if (analogRead(VOLTAGE_PIN) <= 10) {
-      emergency = true;
-    }
-  } else {
-    if (analogRead(VOLTAGE_PIN) > 10) {
-      emergency = false;
-    }
-  }
-
-  if (btState == CONNECTED) {
-  }
-  else {
-    if (bluetooth.available()) {
-      if (btState == NOT_CONNECTED) {
-        if (bluetooth.read() == INIT_DATA) {
-          bluetooth.write(INIT_RESPONSE);
-          btState = MAKING_CONNECTION;
+      case 3: //rechtdoor rijden
+        if (distanceToF3 < gemiddeldeWaarde) {
+          intervalStepperLinks = 4;
+          intervalStepperRechts = 2;
         }
-      } else if (btState == MAKING_CONNECTION) {
-        if (bluetooth.read() == CON_RESPONSE) {
-          btState = CONNECTED;
+        if (distanceToF4 < gemiddeldeWaarde) {
+          intervalStepperLinks = 2;
+          intervalStepperRechts = 4;
         }
+    }
+    break;
+  default:
+    //Nothing
+    break;
+  }
+  stepperLinks();
+  stepperRechts();
+
+  if (analogRead(VOLTAGE_PIN) <= 10) {
+    emergency = true;
+  }
+} else {
+  if (analogRead(VOLTAGE_PIN) > 10) {
+    emergency = false;
+  }
+}
+
+if (btState == CONNECTED) {
+}
+else {
+  if (bluetooth.available()) {
+    if (btState == NOT_CONNECTED) {
+      if (bluetooth.read() == INIT_DATA) {
+        bluetooth.write(INIT_RESPONSE);
+        btState = MAKING_CONNECTION;
+      }
+    } else if (btState == MAKING_CONNECTION) {
+      if (bluetooth.read() == CON_RESPONSE) {
+        btState = CONNECTED;
       }
     }
   }
+}
 
 }
 
