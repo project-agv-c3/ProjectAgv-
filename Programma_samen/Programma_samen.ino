@@ -65,6 +65,7 @@ uint8_t distancesonar1 = 0;
 uint8_t distancesonar2 = 0;
 uint8_t distancesonar3 = 0;
 uint8_t distancesonar4 = 0;
+uint8_t gemiddeldeWaarde = 0;
 
 //Globale integers voor statussen
 uint8_t sonarNummer = 0;
@@ -124,34 +125,37 @@ void loop() {
     sonar();
     ToF();
 
+    if (distanceToF3 < gemiddeldeWaarde) {
+      state = 2;
+    }
+
+    if (distanceToF4 < gemiddeldeWaarde) {
+      state = 3;
+    }
+
     switch (state) {
       case 1:
         positieLinks = 0;
         positieRechts = 0;
-        intervalStepperLinks = 2;
-        intervalStepperRechts = 2;
+        intervalStepperLinks = 4;
+        intervalStepperRechts = 4;
         done = 0;
-        state = 2;
+        //    state = 2;
         break;
       case 2:
-        if (positieLinks == 1000) {
-          intervalStepperLinks = 0;
-          done++;
-        }
-        if (positieRechts == 1000) {
-          intervalStepperRechts = 0;
-          done++;
-        }
-        if (done >= 2) {
-          state = 3;
-        }
+        intervalStepperLinks = 4;
+        intervalStepperRechts = 2;
+        break;
+      case 3:
+        intervalStepperLinks = 2;
+        intervalStepperRechts = 4;
         break;
       default:
         //Nothing
         break;
     }
-      stepperLinks();
-      stepperRechts();
+    stepperLinks();
+    stepperRechts();
 
     if (analogRead(VOLTAGE_PIN) <= 10) {
       emergency = true;
@@ -229,6 +233,7 @@ void ToF() {
     } else {
       tofNummer++;
     }
+    gemiddeldeWaarde = (distanceToF3 + distanceToF4) / 2;
   }
 }
 
