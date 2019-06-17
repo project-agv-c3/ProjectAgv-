@@ -4,12 +4,6 @@
 #include <NewPing.h>
 #include <SoftwareSerial.h>
 
-//Initialisatie van de ToFs
-VL53L0X ToF1;
-VL53L0X ToF2;
-VL53L0X ToF3;
-VL53L0X ToF4;
-
 //De maximale afstanden
 #define MAX_SONAR 400           //Voor de ultrasone sensoren is dit een afstand in centimeters
 #define MAX_TOF 500             //Voor de ToFs is dit een timeout
@@ -27,12 +21,34 @@ VL53L0X ToF4;
 #define PING_PIN2 3
 #define PING_PIN3 4
 #define PING_PIN4 5
+#define VOLTAGE_PIN A6
+#define TX_PIN A3
+#define RX_PIN A2
 
 //De adressen voor de ToFs
 #define TOF1 0x30
 #define TOF2 0x31
 #define TOF3 0x32
 #define TOF4 0x33
+
+//De defines voor de btState variabele
+#define NOT_CONNECTED 0
+#define MAKING_CONNECTION 1
+#define CONNECTED 2
+
+//Verschillende codes die via bluetooth verstuurd worden
+#define INIT_DATA 0x56
+#define INIT_RESPONSE 0x57
+#define CON_RESPONSE 0x58
+
+//Initialisatie van de ToFs
+VL53L0X ToF1;
+VL53L0X ToF2;
+VL53L0X ToF3;
+VL53L0X ToF4;
+
+//Het aanmaken van het seriele object voor de bluetooth communicatie
+SoftwareSerial bluetooth = SoftwareSerial(RX_PIN, TX_PIN);
 
 //Het aanmaken van de NewPing objecten voor de ultrasone sensoren
 NewPing sonar1(PING_PIN1, PING_PIN1, MAX_SONAR);
@@ -51,7 +67,8 @@ uint8_t distancesonar3 = 0;
 uint8_t distancesonar4 = 0;
 
 //Globale integers voor statussen
-uint8_t sensornummer = 0;
+uint8_t sonarNummer = 0;
+uint8_t tofNummer = 0;
 boolean statusStepperLinks = false;
 boolean statusStepperRechts = false;
 boolean richtingStepperLinks = false;
@@ -64,10 +81,10 @@ int done = 0;
 
 //variabele millis
 unsigned long previousMillisToF = 0;
-#define intervalToF 50
+#define intervalToF 12
 
-unsigned long previousMillisSonar = 0;
-#define intervalsonar 50
+unsigned long previousMillisSonar = 6;
+#define intervalsonar 12
 
 unsigned long previousMillisStepperLinks = 0;
 unsigned long previousMillisStepperRechts = 0;
@@ -76,10 +93,15 @@ int16_t intervalStepperRechts = 15;
 #define intervalLaagzetten 1
 
 uint8_t state = 0;
+boolean emergency = false;
+uint8_t btState = NOT_CONNECTED;
 
 void setup() {
-  Serial.begin(9600);   //Start een seriele verbinding met de computer voor debugging
-  Wire.begin();         //Start de I2C comunicatie
+  pinMode(RX_PIN, INPUT);
+  pinMode(TX_PIN, OUTPUT);
+  bluetooth.begin(9600);  //Start de seriele connectie met de bluetooth module
+  Serial.begin(9600);     //Start een seriele verbinding met de computer voor debugging
+  Wire.begin();           //Start de I2C comunicatie
 
   //Zet alle output pinnen als outputs (dit is voor de ultrasone sensoren niet nodig, dit wordt gedaan door de library)
   pinMode(TOF_PIN1, OUTPUT);
@@ -94,64 +116,90 @@ void setup() {
   state = 1;
 
   ToFs_init();          //Initializeer de time of flight sensoren
-/*
-  //Interrupt service routine aanzetten
-  //set timer1 interrupt at 1Hz
-  TCCR1A = 0;// set entire TCCR1A register to 0
-  TCCR1B = 0;// same for TCCR1B
-  TCNT1  = 0;//initialize counter value to 0
-  // set compare match register for 1hz increments
-  OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
-  // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
-  // Set CS12 and CS10 bits for 1024 prescaler
-  TCCR1B |= (1 << CS12) | (1 << CS10);
-  // enable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
+  /*
+    //Interrupt service routine aanzetten
+    //set timer1 interrupt at 1Hz
+    TCCR1A = 0;// set entire TCCR1A register to 0
+    TCCR1B = 0;// same for TCCR1B
+    TCNT1  = 0;//initialize counter value to 0
+    // set compare match register for 1hz increments
+    OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+    // turn on CTC mode
+    TCCR1B |= (1 << WGM12);
+    // Set CS12 and CS10 bits for 1024 prescaler
+    TCCR1B |= (1 << CS12) | (1 << CS10);
+    // enable timer compare interrupt
+    TIMSK1 |= (1 << OCIE1A);
 
-  sei();
+    sei();
   */
 }
 
 void loop() {
-  //updaten sensoren
-  sonar();
-  ToF();
-  switch (state) {
-    case 1:
-      positieLinks = 0;
-      positieRechts = 0;
-      intervalStepperLinks = 2;
-      intervalStepperRechts = 2;
-      done = 0;
-      state = 2;
-      break;
-    case 2:
-      if (positieLinks == 1000) {
-        intervalStepperLinks = 0;
-        done++;
-      }
-      if (positieRechts == 1000) {
-        intervalStepperRechts = 0;
-        done++;
-      }
-      if (done >= 2) {
-        state = 3;
-      }
-      break;
-    default:
-      //Nothing
-      break;
+  if (!emergency) {
+    //updaten sensoren
+    sonar();
+    ToF();
+    switch (state) {
+      case 1:
+        positieLinks = 0;
+        positieRechts = 0;
+        intervalStepperLinks = 2;
+        intervalStepperRechts = 2;
+        done = 0;
+        state = 2;
+        break;
+      case 2:
+        if (positieLinks == 1000) {
+          intervalStepperLinks = 0;
+          done++;
+        }
+        if (positieRechts == 1000) {
+          intervalStepperRechts = 0;
+          done++;
+        }
+        if (done >= 2) {
+          state = 3;
+        }
+        break;
+      default:
+        //Nothing
+        break;
+    }
+    stepperLinks();
+    stepperRechts();
+    if (analogRead(VOLTAGE_PIN) <= 10) {
+      emergency = true;
+    }
+  } else {
+    if (analogRead(VOLTAGE_PIN) > 10) {
+      emergency = false;
+    }
   }
-  stepperLinks();
-  stepperRechts();
+  if (btState == CONNECTED) {
+
+  } else {
+    if (bluetooth.available()) {
+      if (btState == NOT_CONNECTED) {
+        if (bluetooth.read() == INIT_DATA) {
+          bluetooth.write(INIT_RESPONSE);
+          btState = MAKING_CONNECTION;
+        }
+      } else if (btState == MAKING_CONNECTION) {
+        if (bluetooth.read() == CON_RESPONSE) {
+          btState = CONNECTED;
+        }
+      }
+    }
+  }
+
 }
 
 void sonar() {
   //updaten Sonars
   if (millis() - previousMillisSonar >= intervalsonar) {
     previousMillisSonar = millis();
-    switch (sensornummer) {
+    switch (sonarNummer) {
       case 0:
         distancesonar1 = sonar1.ping_cm();
         break;
@@ -165,11 +213,10 @@ void sonar() {
         distancesonar4 = sonar4.ping_cm();
         break;
     }
-    if (sensornummer >= 3) {
-      sensornummer = 0;
-    }
-    else {
-      sensornummer++;
+    if (sonarNummer >= 3) {
+      sonarNummer = 0;
+    } else {
+      sonarNummer++;
     }
   }
 }
@@ -177,10 +224,25 @@ void sonar() {
 void ToF() {
   if (millis() - previousMillisToF >= intervalToF) {
     previousMillisToF = millis();
-    distanceToF1 = ToF1.readRangeSingleMillimeters();
-    distanceToF2 = ToF2.readRangeSingleMillimeters();
-    distanceToF3 = ToF3.readRangeSingleMillimeters();
-    distanceToF4 = ToF4.readRangeSingleMillimeters();
+    switch (tofNummer) {
+      case 0:
+        distanceToF1 = ToF1.readRangeSingleMillimeters();
+        break;
+      case 1:
+        distanceToF2 = ToF2.readRangeSingleMillimeters();
+        break;
+      case 2:
+        distanceToF3 = ToF3.readRangeSingleMillimeters();
+        break;
+      case 3:
+        distanceToF4 = ToF4.readRangeSingleMillimeters();
+        break;
+    }
+    if (tofNummer >= 3) {
+      tofNummer = 0;
+    } else {
+      tofNummer++;
+    }
   }
 }
 
