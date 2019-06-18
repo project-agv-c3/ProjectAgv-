@@ -1,5 +1,4 @@
 //Libraries toevoegen
-// Test Gijs
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <NewPing.h>
@@ -134,7 +133,7 @@ void loop() {
       state = 3;
     }
 
-    
+
     if (distancesonar1 < afstandSonarVoor) {
       state = 2;
     }
@@ -162,19 +161,18 @@ void loop() {
           intervalStepperLinks = 2;
           intervalStepperRechts = 4;
         }
+        break;
+      default:
+        //Nothing
+        break;
     }
-    break;
-  default:
-    //Nothing
-    break;
   }
   stepperLinks();
   stepperRechts();
 
   if (analogRead(VOLTAGE_PIN) <= 10) {
     emergency = true;
-  }
-} else {
+  } else {
   if (analogRead(VOLTAGE_PIN) > 10) {
     emergency = false;
   }
