@@ -16,6 +16,7 @@ void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 int state = 0;
 int selected = 0;
+int latestData = 0;
 
 String[] names = new String[0];
 color backColor = color(255, 210, 150);
@@ -75,7 +76,9 @@ void draw() {
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       bt.connectToDeviceByName(names[selected]);
-      send(0x56);
+      //delay(500);
+      //send(0x55);
+      //send(0x56);
       state = 3;
       break;
     case 3:
@@ -95,9 +98,7 @@ void draw() {
       rect(0, 0, width, 180);
       fill(strokeColor);
       text(deviceName, width / 2, 90);
-      break;
-    case 5:
-    
+      text(latestData, width / 2, height / 2);
       break;
   }
 }
@@ -117,6 +118,16 @@ void onBluetoothDataEvent(String who, byte[] data) {
       if (data[0] == 0x57) {
         state = 4;
         send(0x58);
+      }
+      break;
+    case 4:
+      latestData = data[0];
+      break;
+    default:
+      background(0);
+      fill(255);
+      for (int i = 0; i < data.length; i++) {
+        text(str(data[i]), width / 2, 200 + 200 * i);
       }
       break;
   }
