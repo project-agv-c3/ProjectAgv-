@@ -22,6 +22,7 @@ String[] names = new String[0];
 color backColor = color(255, 210, 150);
 color strokeColor = color(50);
 color fillColor = color(245, 152, 2);
+color overColor = color(50, 80);
 PVector lastMouse = new PVector(0, 0);
 String deviceName;
 
@@ -66,32 +67,29 @@ void draw() {
         }
       }
       break;
-    case 2:
+    case 2:  //Create the connection
       background(backColor);
       stroke(strokeColor);
       strokeWeight(2);
-      fill(50, 80);
+      fill(overColor);
       rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
       fill(strokeColor);
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       bt.connectToDeviceByName(names[selected]);
-      //delay(500);
-      //send(0x55);
-      //send(0x56);
       state = 3;
       break;
-    case 3:
+    case 3:  //Wait for a confirmation of connection
       background(backColor);
       stroke(strokeColor);
       strokeWeight(2);
-      fill(50, 80);
+      fill(overColor);
       rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
       fill(strokeColor);
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       break;
-    case 4:
+    case 4:  //Normal operation
       background(backColor);
       stroke(strokeColor);
       fill(fillColor);
@@ -99,6 +97,9 @@ void draw() {
       fill(strokeColor);
       text(deviceName, width / 2, 90);
       text(latestData, width / 2, height / 2);
+      break;
+    default:
+      //Do nothing
       break;
   }
 }
@@ -124,11 +125,7 @@ void onBluetoothDataEvent(String who, byte[] data) {
       latestData = data[0];
       break;
     default:
-      background(0);
-      fill(255);
-      for (int i = 0; i < data.length; i++) {
-        text(str(data[i]), width / 2, 200 + 200 * i);
-      }
+      //Do nothing
       break;
   }
 }
