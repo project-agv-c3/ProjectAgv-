@@ -200,7 +200,7 @@ void loop() {
           positieRechts = 0;
           interval(4, 4);
           bochtRichting = LINKS;
-          padLengte = PAD_LENGTE + distanceToF4 * 1.2;
+          padLengte = PAD_LENGTE + distanceToF4;
           state = DOORRIJDEN;
         } else {
           if (distancesonar1 > afstandSonarVoor) {
@@ -257,9 +257,9 @@ void loop() {
       case DOORRIJDEN:
         if (positieLinks >= DOORRIJ_LENGTE && positieRechts >= DOORRIJ_LENGTE) {
           if (bochtRichting == LINKS) {
-            interval(0, 3);
+            interval(0, 4);
           } else {
-            interval(3, 0);
+            interval(4, 0);
           }
           positieRechts = 0;
           positieLinks = 0;
