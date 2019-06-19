@@ -55,6 +55,15 @@
 #define DOORRIJDEN 2
 #define BOCHT_MAKEN 3
 
+//Defines voor nestStatus
+#define MODE 1
+#define TREES 2
+#define BATTERY 3
+
+//De verschillende modes
+#define AUTOMATISCH 1
+#define VOLGEN 2
+
 //Initialisatie van de ToFs
 VL53L0X ToF1;
 VL53L0X ToF2;
@@ -106,8 +115,11 @@ uint8_t done = 0;
 unsigned long previousMillisToF = 0;
 #define intervalToF 20
 
-unsigned long previousMillisSonar = 6;
+unsigned long previousMillisSonar = 10;
 #define intervalsonar 20
+
+unsigned long previousMillisStatus = 0;
+uint8_t nextStatus = MODE;
 
 unsigned long previousMillisStepperLinks = 0;
 unsigned long previousMillisStepperRechts = 0;
@@ -117,9 +129,11 @@ int8_t intervalStepperLinks = 0;
 int8_t intervalStepperRechts = 0;
 #define intervalLaagzetten 1
 
+uint8_t mode = AUTOMATISCH;
 uint8_t state = IDLING;
 boolean emergency = false;
 uint8_t btState = NOT_CONNECTED;
+uint8_t treesCounted = 0;
 
 void setup() {
   pinMode(RX_PIN, INPUT);
@@ -160,6 +174,7 @@ void loop() {
     //updaten sensoren
     sonar();
     ToF();
+    sendStatus();
 
     switch (state) {
       case PAD_VOLGEN:
@@ -244,6 +259,38 @@ void loop() {
 void interval(int8_t _left, int8_t _right) {
   intervalStepperLinks = _left;
   intervalStepperRechts = _right;
+}
+
+void sendStatus() {
+  switch (nextStatus) {
+    case MODE:
+      if (millis() - previousMillisStatus >= 20) {
+        if (mode == AUTOMATISCH) {
+          bluetooth.write();    ///////////////////////////////////////////////////////////
+        } else {
+          bluetooth.write();    ///////////////////////////////////////////////////////////
+        }
+        nextStatus = TREES;
+      }
+      break;
+    case TREES:
+      if (millis - previousMillisStatus >= 40) {
+        bluetooth.write(treesCounted - 1);
+        nextStatus = BATTERY;
+      }
+      break;
+    case BATTERY:
+      if (millis() - previousMillisStatus >= 60) {
+        bluetooth.write();    ////////////////////////////////////////////////////////
+        nextStatus = MODE;
+        previousMillisStatus = millis();
+      }
+      break
+    default:
+      nextStatus = MODE;
+      previousMillisStatus = millis();
+      break;
+  }
 }
 
 void sonar() {
