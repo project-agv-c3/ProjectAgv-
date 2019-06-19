@@ -27,8 +27,8 @@
 #define LED_PIN 11
 
 #define MAX_PAD_WIDTH 250
-#define DOORRIJ_LENGTE 620
-#define BOCHT_LENGTE 640 + 80
+#define DOORRIJ_LENGTE 600
+#define BOCHT_LENGTE 640 + 100
 #define GROTE_BOCHT 790 + 60
 #define PAD_LENGTE 130 + 30
 
@@ -257,9 +257,9 @@ void loop() {
       case DOORRIJDEN:
         if (positieLinks >= DOORRIJ_LENGTE && positieRechts >= DOORRIJ_LENGTE) {
           if (bochtRichting == LINKS) {
-            interval(0, 4);
+            interval(0, 3);
           } else {
-            interval(4, 0);
+            interval(3, 0);
           }
           positieRechts = 0;
           positieLinks = 0;
