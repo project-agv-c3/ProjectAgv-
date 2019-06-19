@@ -47,8 +47,8 @@
 #define CONNECTED 2
 
 //Verschillende codes die via bluetooth verstuurd worden
-#define INIT_DATA 0x56
-#define INIT_RESPONSE 0x57
+#define INIT_DATA 7
+#define INIT_RESPONSE 8
 
 //Verschillende states
 #define IDLING 0
@@ -64,6 +64,7 @@
 #define BATTERY 3
 
 //De verschillende modes
+//efine IDLING 0
 #define AUTOMATISCH 1
 #define VOLGEN 2
 
@@ -162,7 +163,7 @@ void setup() {
   pinMode(stepPinRechts, OUTPUT);
   pinMode(dirPinRechts, OUTPUT);
   state = PAD_VOLGEN;
-  bluetooth.write(0x57);
+  bluetooth.write(INIT_DATA);
   ToFs_init();          //Initializeer de time of flight sensoren
   TCCR2A = 0b00000000;  //
   TCCR2B = 0b00000100;  //Prescaler van 64 bits
@@ -171,11 +172,9 @@ void setup() {
 }
 
 void loop() {
-  if (btState == CONNECTED) {
-
-  } else {
+  if (btState != CONNECTED) {
     if (bluetooth.available()) {
-      if (bluetooth.read() == 0x58) {
+      if (bluetooth.read() == INIT_RESPONSE) {
         btState = CONNECTED;
       }
     }
@@ -305,6 +304,7 @@ void loop() {
           if (bluetooth.available()) {
             if (bluetooth.read() == 10) {
               treesCounted = 0;
+              done = 0;
               state = PAD_VOLGEN;
             }
           }
@@ -317,12 +317,16 @@ void loop() {
     if (analogRead(VOLTAGE_PIN) <= 10) {
       interval(0, 0);
       emergency = true;
-      digitalWrite(LED_PIN, HIGH);
+      blutooth.write(101);
     }
   } else {
+    if (millis() - previousMillisStatus >= 50) {
+      bluetooth.write(101); //Blijf zeggen dat de AGV in emergency is
+      previousMillisStatus = millis();
+    }
     if (analogRead(VOLTAGE_PIN) > 10) {
       emergency = false;
-      digitalWrite(LED_PIN, LOW);
+      bluetooth.write(102);
     }
   }
 }
@@ -337,22 +341,24 @@ void sendStatus() {
     case MODE:
       if (millis() - previousMillisStatus >= 20) {
         if (mode == AUTOMATISCH) {
-          bluetooth.write(-100);
+          bluetooth.write(1);
+        } else if (mode == FOLLOW) {
+          bluetooth.write(2);
         } else {
-          bluetooth.write(-101);
+          bluetooth.write(3);
         }
         nextStatus = TREES;
       }
       break;
     case TREES:
       if (millis - previousMillisStatus >= 40) {
-        bluetooth.write(treesCounted - 1);
+        bluetooth.write(max(treesCounted - 128, -1));
         nextStatus = BATTERY;
       }
       break;
     case BATTERY:
       if (millis() - previousMillisStatus >= 60) {
-        bluetooth.write(int((analogRead(VOLTAGE_PIN) - 855) / 50) - 50);
+        bluetooth.write(map(constrain(analogRead(VOLTAGE_PIN), 855, 1003), 855, 1003, 100, 130) - 30);
         nextStatus = MODE;
         previousMillisStatus = millis();
       }

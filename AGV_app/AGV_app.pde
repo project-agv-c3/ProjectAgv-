@@ -17,20 +17,28 @@ void onActivityResult(int requestCode, int resultCode, Intent data) {
 PGraphics batteryLogo;
 PGraphics treeLogo;
 PGraphics modeLogo;
+PGraphics warnLogo;
+PGraphics scanLogo;
 
 int state = 0;
 int selected = 0;
+int emerColor = 255;
+int emergency = -6;
+int mode = 0;
+int angle = 0;
+boolean emergencyMode = false;
 
 String[] names = new String[0];
 color backColor = color(255, 210, 150);
 color strokeColor = color(50);
 color fillColor = color(245, 152, 2);
 color overColor = color(50, 80);
+color emerbackColor = color(20, 190);
 PVector lastMouse = new PVector(0, 0);
 String deviceName;
 String sMode = "Automatic";
 String sTrees = "0";
-String sBattery = "12,0";
+String sBattery = "12,0 V";
 
 void setup() {
   fullScreen();
@@ -96,28 +104,69 @@ void draw() {
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       break;
-    case 4:  //Normal operation
+    case 4:
+    case 5:  //Emergency
       background(backColor);
       stroke(strokeColor);
       strokeWeight(9);
       fill(fillColor);
-      rect(0, 0, width, 180);
+      rect(0, 0, width, 180);/////////////////////////////////////////////
       fill(strokeColor);
       textAlign(CENTER, CENTER);
       text(deviceName, width / 2, 90);
       textAlign(LEFT, CENTER);
       image(modeLogo, 25, 205);
       text("Mode:  " + sMode, 250, 305);
-      line(0, 430, width, 430);
+      line(0, 430, width, 430);///////////////////////////////////////////
       image(treeLogo, 25, 455);
       text("Trees counted:  " + sTrees, 250, 555);
-      line(0, 680, width, 680);
+      line(0, 680, width, 680);///////////////////////////////////////////
       image(batteryLogo, 25, 705);
       text("Battery voltage:  " + sBattery, 250, 805);
-      line(0, 930, width, 930);
-      if (lastMouse.x != 0) {
-        lastMouse.set(0, 0);
-        send(10);
+      line(0, 930, width, 930);///////////////////////////////////////////
+      image(scanLogo, 25, 955);
+      if (mode == 0) {
+        text("Perform scan", 250, 1055);
+        if (lastMouse.y >= 930 && lastMouse.y <= 1180) {
+          lastMouse.set(0, 0);
+          send(10);
+        }
+      } else if (mode == 1) {
+        text("Scanning...", 250, 1055);
+        pushMatrix();
+        translate(125, 1055);
+        rotate(radians(angle));
+        line(0, 0, 0, 90);
+        popMatrix();
+        angle += 3;
+        if (angle >= 360) {
+          angle -= 360;
+        }
+      }
+      line(0, 1180, width, 1180);//////////////////////////////////////////
+      if (state == 5) {
+        strokeWeight(5);
+        fill(emerbackColor);
+        rect(100, 200, width - 200, height - 400, 10);
+        textAlign(CENTER, CENTER);
+        emerColor += emergency;
+        if (emerColor >= 255) {
+          emergency = -6;
+        } else if (emerColor <= 255 - 6 * 15) {
+          emergency = 6;
+        }
+        fill(emerColor, 0, 0);
+        textSize(90);
+        text("Emergency\nwarning!", width / 2, 400);
+        text("Emergency\nwarning!", width / 2, height - 400);
+        textSize(70);
+        fill(220, 0, 0);
+        text("The emergency \n button on the \n AGV has been \n pressed. Please go \n and check to \n see if the area \n is safe again.", width / 2, height / 2);
+        createWarning(emerColor);
+        image(warnLogo, 160, 320);
+        image(warnLogo, width - 320, 320);
+        image(warnLogo, 160, height - 480);
+        image(warnLogo, width - 320, height - 480);
       }
       break;
     default:
@@ -139,20 +188,32 @@ void onBluetoothDataEvent(String who, byte[] _data) {
   byte data = _data[0];
   switch (state) {
     case 3:
-      if (data == 0x57) {
+      if (data == 7) {
         state = 4;
-        send(0x58);
+        send(8);
       }
       break;
     case 4:
-      if (data <= -1 && data >= -50) {//Values -50 to -1 are battery voltages
-        sBattery = str((150 + data) / 10) + "," + str((150 + data) % 10) + " V";
-      } else if (data <= 51 && data >= 1) {//Values 1 to 51 are numbers of trees (-1)
-        sTrees = str(data - 1);
-      } else if (data ==  -100) {
+      if (data == 101) {
+        state = 5;
+      } else if (data >= 70 && data <= 100) {//Values 70 to 100 are battery voltages
+        sBattery = str((data + 30) / 10) + "," + str((data + 30) % 10) + " V";
+      } else if (data >= -128 && data <= -1) {//Values -128 to -1 are numbers of trees (+128)
+        sTrees = str(data + 128);
+      } else if (data ==  1) {
+        mode = 1;
         sMode = "Automatic";
-      } else if (data == -101) {
+      } else if (data == 2) {
+        mode = 2;
         sMode = "Follow";
+      } else if (data == 3) {
+        mode = 0;
+        sMode = "Idle";
+      }
+      break;
+    case 5:
+      if (data != 101) {
+        state = 4;
       }
       break;
     default:
@@ -221,4 +282,30 @@ void createLogos() {
     modeLogo.rotate(radians(120));
   }
   modeLogo.endDraw();
+  scanLogo = createGraphics(200, 200);
+  scanLogo.beginDraw();
+  scanLogo.stroke(strokeColor);
+  scanLogo.noFill();
+  scanLogo.strokeWeight(9);
+  scanLogo.translate(100, 100);
+  scanLogo.line(-90, 0, 90, 0);
+  scanLogo.line(0, -90, 0, 90);
+  scanLogo.ellipse(0, 0, 160, 160);
+  scanLogo.ellipse(0, 0, 80, 80);
+  scanLogo.endDraw();
+}
+
+void createWarning(int _color) {
+  modeLogo.endDraw();
+  warnLogo = createGraphics(160, 160);
+  warnLogo.beginDraw();
+  warnLogo.stroke(_color, 0, 0);
+  warnLogo.strokeWeight(9);
+  warnLogo.line(80, 20, 150, 140);
+  warnLogo.line(150, 140, 10, 140);
+  warnLogo.line(10, 140, 80, 20);
+  warnLogo.strokeWeight(13);
+  warnLogo.line(80, 55, 80, 100);
+  warnLogo.point(80, 120);
+  warnLogo.endDraw();
 }
