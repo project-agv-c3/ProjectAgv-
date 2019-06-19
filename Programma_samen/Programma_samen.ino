@@ -26,9 +26,11 @@
 #define RX_PIN A2
 #define LED_PIN 11
 
-#define MAX_PAD_WIDTH 160
+#define MAX_PAD_WIDTH 250
 #define DOORRIJ_LENGTE 620
-#define BOCHT_LENGTE 330
+#define BOCHT_LENGTE 640 + 80
+#define GROTE_BOCHT 790 + 60
+#define PAD_LENGTE 130 + 30
 
 #define LINKS true
 #define RECHTS false
@@ -47,13 +49,14 @@
 //Verschillende codes die via bluetooth verstuurd worden
 #define INIT_DATA 0x56
 #define INIT_RESPONSE 0x57
-#define CON_RESPONSE 0x58
 
 //Verschillende states
 #define IDLING 0
 #define PAD_VOLGEN 1
 #define DOORRIJDEN 2
 #define BOCHT_MAKEN 3
+#define PAD_VOORBIJ 4
+#define PAD_INRIJDEN 5
 
 //Defines voor nestStatus
 #define MODE 1
@@ -92,7 +95,12 @@ uint8_t distancesonar1 = 0;
 uint8_t distancesonar2 = 0;
 uint8_t distancesonar3 = 0;
 uint8_t distancesonar4 = 0;
-uint8_t gemiddeldeWaarde = 0;
+uint8_t oldDistancesonar1 = 0;
+uint8_t oldDistancesonar2 = 0;
+uint8_t oldDistancesonar3 = 0;
+uint8_t oldDistancesonar4 = 0;
+uint16_t gemiddeldeWaarde = 0;
+uint16_t padLengte = PAD_LENGTE;
 
 //globale integers voor vaste afstanden
 uint8_t afstandPad = 50;
@@ -113,10 +121,10 @@ uint8_t done = 0;
 
 //variabele millis
 unsigned long previousMillisToF = 0;
-#define intervalToF 20
+#define intervalToF 10
 
 unsigned long previousMillisSonar = 10;
-#define intervalsonar 20
+#define intervalsonar 10
 
 unsigned long previousMillisStatus = 0;
 uint8_t nextStatus = MODE;
@@ -130,8 +138,11 @@ int8_t intervalStepperRechts = 0;
 #define intervalLaagzetten 1
 
 uint8_t mode = AUTOMATISCH;
+uint8_t bochtStap = 1;
 uint8_t state = IDLING;
 boolean emergency = false;
+boolean seeingTree2 = false;
+boolean seeingTree4 = false;
 uint8_t btState = NOT_CONNECTED;
 uint8_t treesCounted = 0;
 
@@ -174,8 +185,14 @@ void loop() {
     //updaten sensoren
     sonar();
     ToF();
-    sendStatus();
-
+    if (btState == CONNECTED) {
+      sendStatus();
+    }
+    if (done == 2) {
+      interval(0, 0);
+      done = 0;
+      state = IDLING;
+    }
     switch (state) {
       case PAD_VOLGEN:
         if ((distanceToF3 + distanceToF4) > MAX_PAD_WIDTH) {
@@ -183,6 +200,7 @@ void loop() {
           positieRechts = 0;
           interval(4, 4);
           bochtRichting = LINKS;
+          padLengte = PAD_LENGTE + distanceToF4 * 1.2;
           state = DOORRIJDEN;
         } else {
           if (distancesonar1 > afstandSonarVoor) {
@@ -191,23 +209,40 @@ void loop() {
               if (offset > 20) {
                 if (distanceToF3 < gemiddeldeWaarde) {
                   interval(5, 3);
-                  bluetooth.write(-2);
                 } else {
                   interval(3, 5);
-                  bluetooth.write(2);
                 }
               } else {
                 if (distanceToF3 < gemiddeldeWaarde) {
                   interval(5, 4);
-                  bluetooth.write(-1);
                 } else {
                   interval(4, 5);
-                  bluetooth.write(1);
                 }
               }
             } else {
               interval(4, 4);
-              bluetooth.write((byte)0);
+            }
+            if (done == 0) {
+              if (distancesonar4 < 12) {
+                if (!seeingTree4) {
+                  treesCounted++;
+                  seeingTree4 = true;
+                }
+              } else {
+                if (seeingTree4) {
+                  seeingTree4 = false;
+                }
+              }
+            }
+            if (distancesonar2 < 12) {
+              if (!seeingTree2) {
+                treesCounted++;
+                seeingTree2 = true;
+              }
+            } else {
+              if (seeingTree2) {
+                seeingTree2 = false;
+              }
             }
           } else {
             interval(0, 0);
@@ -222,25 +257,61 @@ void loop() {
       case DOORRIJDEN:
         if (positieLinks >= DOORRIJ_LENGTE && positieRechts >= DOORRIJ_LENGTE) {
           if (bochtRichting == LINKS) {
-            interval(-6, 6);
+            interval(0, 4);
           } else {
-            interval(6, -6);
+            interval(4, 0);
           }
           positieRechts = 0;
           positieLinks = 0;
           state = BOCHT_MAKEN;
-          done = 0;
+          bochtStap = 1;
         }
         break;
       case BOCHT_MAKEN:
-        if (positieRechts >= BOCHT_LENGTE && positieLinks >= BOCHT_LENGTE) {///////////////////////////////////////////////////////////////
-          interval(0, 0);
-          state = 99;
+        if (bochtStap == 1) {
+          if (positieRechts >= BOCHT_LENGTE || positieLinks >= BOCHT_LENGTE) {
+            state = PAD_VOORBIJ;
+            positieRechts = 0;
+            positieLinks = 0;
+            interval(4, 4);
+          }
+        } else if (bochtStap == 2) {
+          if (positieRechts >= GROTE_BOCHT || positieLinks >= GROTE_BOCHT) {
+            state = PAD_INRIJDEN;
+            positieRechts = 0;
+            positieLinks = 0;
+            interval(4, 4);
+          }
         }
         break;
-
+      case PAD_VOORBIJ:
+        if (positieRechts >= padLengte && positieLinks >= padLengte) {
+          bochtStap = 2;
+          state = BOCHT_MAKEN;
+          positieLinks = 0;
+          positieRechts = 0;
+          bochtRichting = LINKS;
+          interval(10, 2);
+        }
+        break;
+      case PAD_INRIJDEN:
+        if (distanceToF3 + distanceToF4 < MAX_PAD_WIDTH) {
+          done++;
+          state = PAD_VOLGEN;
+        }
+        break;
+      case IDLING:
+        if (CONNECTED) {
+          if (bluetooth.available()) {
+            if (bluetooth.read() == 10) {
+              treesCounted = 0;
+              state = PAD_VOLGEN;
+            }
+          }
+        }
+        break;
       default:
-        //Niks doen
+
         break;
     }
     if (analogRead(VOLTAGE_PIN) <= 10) {
@@ -266,9 +337,9 @@ void sendStatus() {
     case MODE:
       if (millis() - previousMillisStatus >= 20) {
         if (mode == AUTOMATISCH) {
-          bluetooth.write();    ///////////////////////////////////////////////////////////
+          bluetooth.write(-100);
         } else {
-          bluetooth.write();    ///////////////////////////////////////////////////////////
+          bluetooth.write(-101);
         }
         nextStatus = TREES;
       }
@@ -281,11 +352,11 @@ void sendStatus() {
       break;
     case BATTERY:
       if (millis() - previousMillisStatus >= 60) {
-        bluetooth.write();    ////////////////////////////////////////////////////////
+        bluetooth.write(int((analogRead(VOLTAGE_PIN) - 855) / 50) - 50);
         nextStatus = MODE;
         previousMillisStatus = millis();
       }
-      break
+      break;
     default:
       nextStatus = MODE;
       previousMillisStatus = millis();
@@ -301,35 +372,35 @@ void sonar() {
     switch (sonarNummer) {
       case 0:
         tempDist = sonar1.ping_cm();
-        if (tempDist != 0) {
-          distancesonar1 = tempDist;
-        } else {
-          distancesonar1 = 255;
+        if (tempDist == 0) {
+          tempDist = 255;
         }
+        distancesonar1 = (oldDistancesonar1 + tempDist) / 2;
+        oldDistancesonar1 = tempDist;
         break;
       case 1:
         tempDist = sonar2.ping_cm();
-        if (tempDist != 0) {
-          distancesonar2 = tempDist;
-        } else {
-          distancesonar2 = 255;
+        if (tempDist == 0) {
+          tempDist = 255;
         }
+        distancesonar2 = (oldDistancesonar2 + tempDist) / 2;
+        oldDistancesonar2 = tempDist;
         break;
       case 2:
         tempDist = sonar3.ping_cm();
-        if (tempDist != 0) {
-          distancesonar3 = tempDist;
-        } else {
-          distancesonar3 = 255;
+        if (tempDist == 0) {
+          tempDist = 255;
         }
+        distancesonar3 = (oldDistancesonar3 + tempDist) / 2;
+        oldDistancesonar3 = tempDist;
         break;
       case 3:
         tempDist = sonar4.ping_cm();
-        if (tempDist != 0) {
-          distancesonar4 = tempDist;
-        } else {
-          distancesonar4 = 255;
+        if (tempDist == 0) {
+          tempDist = 255;
         }
+        distancesonar4 = (oldDistancesonar4 + tempDist) / 2;
+        oldDistancesonar4 = tempDist;
         break;
     }
     if (sonarNummer >= 3) {
