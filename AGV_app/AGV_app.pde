@@ -14,16 +14,23 @@ void onActivityResult(int requestCode, int resultCode, Intent data) {
   bt.onActivityResult(requestCode, resultCode, data);
 }
 
+PGraphics batteryLogo;
+PGraphics treeLogo;
+PGraphics modeLogo;
+
 int state = 0;
 int selected = 0;
-int latestData = 0;
 
 String[] names = new String[0];
 color backColor = color(255, 210, 150);
 color strokeColor = color(50);
 color fillColor = color(245, 152, 2);
+color overColor = color(50, 80);
 PVector lastMouse = new PVector(0, 0);
 String deviceName;
+String sMode = "Automatic";
+String sTrees = "0";
+String sBattery = "12,0";
 
 void setup() {
   fullScreen();
@@ -46,7 +53,7 @@ void draw() {
       stroke(strokeColor);
       strokeWeight(9);
       fill(fillColor);
-      rect(0,0, width, 180);
+      rect(0, 0, width, 180);
       fill(strokeColor);
       text("Select your AGV:", 540, 90);
       for (int i = 0; i < names.length; i++) {
@@ -66,39 +73,50 @@ void draw() {
         }
       }
       break;
-    case 2:
+    case 2:  //Create the connection
       background(backColor);
       stroke(strokeColor);
-      strokeWeight(2);
-      fill(50, 80);
+      strokeWeight(5);
+      fill(overColor);
       rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
       fill(strokeColor);
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       bt.connectToDeviceByName(names[selected]);
-      //delay(500);
-      //send(0x55);
-      //send(0x56);
       state = 3;
       break;
-    case 3:
+    case 3:  //Wait for a confirmation of connection
       background(backColor);
       stroke(strokeColor);
-      strokeWeight(2);
-      fill(50, 80);
+      strokeWeight(5);
+      fill(overColor);
       rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
       fill(strokeColor);
       text("Connecting", width / 2, height / 2 - 70);
       text("to device...", width / 2, height / 2 + 70);
       break;
-    case 4:
+    case 4:  //Normal operation
       background(backColor);
       stroke(strokeColor);
+      strokeWeight(9);
       fill(fillColor);
       rect(0, 0, width, 180);
       fill(strokeColor);
+      textAlign(CENTER, CENTER);
       text(deviceName, width / 2, 90);
-      text(latestData, width / 2, height / 2);
+      textAlign(LEFT, CENTER);
+      image(modeLogo, 25, 205);
+      text("Mode:  " + sMode, 250, 305);
+      line(0, 430, width, 430);
+      image(treeLogo, 25, 455);
+      text("Trees counted:  " + sTrees, 250, 555);
+      line(0, 680, width, 680);
+      image(batteryLogo, 25, 705);
+      text("Battery voltage:  " + sBattery, 250, 805);
+      line(0, 930, width, 930);
+      break;
+    default:
+      //Do nothing
       break;
   }
 }
@@ -112,23 +130,24 @@ void mouseReleased() {
   lastMouse.set(mouseX, mouseY);
 }
 
-void onBluetoothDataEvent(String who, byte[] data) {
+void onBluetoothDataEvent(String who, byte[] _data) {
+  byte data = _data[0];
   switch (state) {
     case 3:
-      if (data[0] == 0x57) {
+      if (data == 0x57) {
         state = 4;
         send(0x58);
       }
       break;
     case 4:
-      latestData = data[0];
+      if (data <= -1 && data >= -50) {//Values -50 to -1 are battery voltages
+        sBattery = str((150 + data) / 10) + "," + str((150 + data) % 10);
+      } else if (data <= 51 && data >= 1) {//Values 1 to 51 are numbers of trees (-1)
+        sTrees = str(data - 1);
+      }
       break;
     default:
-      background(0);
-      fill(255);
-      for (int i = 0; i < data.length; i++) {
-        text(str(data[i]), width / 2, 200 + 200 * i);
-      }
+      //Do nothing
       break;
   }
 }
