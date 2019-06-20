@@ -340,7 +340,7 @@ void loop() {
 //_________________________________Volgstand________________________
     else  if (analogRead(SWITCH) < 512) {
       Serial.println("hoi");
-/*
+
       if (distancesonar1 < volgAfstand) {
         stateVolg = 2;
         Serial.println("hoi2");
