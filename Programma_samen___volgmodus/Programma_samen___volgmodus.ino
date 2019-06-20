@@ -146,7 +146,7 @@ int8_t intervalStepperRechts = 0;
 uint8_t mode = AUTOMATISCH;
 uint8_t bochtStap = 1;
 uint8_t state = IDLING;
-uint8_t stateVolg = IDLING;
+uint8_t stateVolg = 0;
 boolean emergency = false;
 boolean seeingTree2 = false;
 boolean seeingTree4 = false;
@@ -202,7 +202,8 @@ void loop() {
       done = 0;
       state = IDLING;
     }
-    if (analogRead(SWITCH) > 10) {
+    //___Automatic stand________________
+    if (analogRead(SWITCH) >= 512) {
       switch (state) {
         case PAD_VOLGEN:
           if ((distanceToF3 + distanceToF4) > MAX_PAD_WIDTH) {
@@ -336,42 +337,45 @@ void loop() {
         }
       }
     }
-
-    else {
-      if (analogRead(SWITCH) < 10) {
-        Serial.print("hoi");
-        /*if (distancesonar1 < volgAfstand) {
-          stateVolg = VOORUIT;
-          Serial.print("hoi2");
-        }
-        else if (distancesonar1 > volgAfstand) {
-          stateVolg = ACHTERUIT;
-          Serial.print("hoi3");
-        }*/
-
-        switch (stateVolg) {
-          case IDLING:
-            Serial.print("hoi2");
-            positieLinks = 0;
-            positieRechts = 0;
-            interval(0, 0);
-            break;
-
-          case VOORUIT:
-            Serial.print("hoi2");
-            interval(4, 4);
-            break;
-          case ACHTERUIT:
-            Serial.print("hoi2");
-            interval(-4, -4);
-            break;
-
-        }
+//_________________________________Volgstand________________________
+    else  if (analogRead(SWITCH) < 512) {
+      Serial.println("hoi");
+/*
+      if (distancesonar1 < volgAfstand) {
+        stateVolg = 2;
+        Serial.println("hoi2");
       }
-    }
+      if (distancesonar1 > volgAfstand) {
+        stateVolg = 3;
+        Serial.println("hoi3");
+      }
+      
+      
+        switch (stateVolg) {
+        case 1:
+        Serial.print("hoi2");
+        positieLinks = 0;
+        positieRechts = 0;
+        interval(0, 0);
+        break;
 
+        case 2:
+        Serial.print("hoi2");
+        interval(4, 4);
+        break;
+        case 3:
+        Serial.print("hoi2");
+        interval(-4, -4);
+        break;
+
+        }
+
+        } */
+    }
   }
+
 }
+
 
 
 void interval(int8_t _left, int8_t _right) {
