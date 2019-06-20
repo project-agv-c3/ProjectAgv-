@@ -26,6 +26,7 @@
 #define RX_PIN A2
 #define LED_PIN 11
 #define PIEZO_PIN 10
+#define SWITCH_PIN A7
 
 #define MAX_PAD_WIDTH 250
 #define DOORRIJ_LENGTE 600
@@ -147,6 +148,7 @@ boolean seeingTree2 = false;
 boolean seeingTree4 = false;
 uint8_t btState = NOT_CONNECTED;
 uint8_t treesCounted = 0;
+boolean countTrees = true;
 
 void setup() {
   pinMode(RX_PIN, INPUT);
@@ -190,119 +192,148 @@ void loop() {
     if (btState == CONNECTED) {
       sendStatus();
     }
-    if (done == 2) {
-      interval(0, 0);
-      done = 0;
-      state = IDLING;
-    }
-    switch (state) {
-      case PAD_VOLGEN:
-        if ((distanceToF3 + distanceToF4) > MAX_PAD_WIDTH) {
-          positieLinks = 0;
-          positieRechts = 0;
-          interval(4, 4);
-          bochtRichting = LINKS;
-          padLengte = PAD_LENGTE + distanceToF4;
-          state = DOORRIJDEN;
-        } else {
-          if (distancesonar1 > afstandSonarVoor) {
-            uint16_t offset = abs(distanceToF3 - gemiddeldeWaarde);
-            if (offset > 10) {
-              if (offset > 20) {
-                if (distanceToF3 < gemiddeldeWaarde) {
-                  interval(5, 3);
-                } else {
-                  interval(3, 5);
-                }
-              } else {
-                if (distanceToF3 < gemiddeldeWaarde) {
-                  interval(5, 4);
-                } else {
-                  interval(4, 5);
-                }
-              }
-            } else {
+
+    switch (mode) {
+      case AUTOMATISCH:
+        if (done == 2) {
+          interval(0, 0);
+          done = 0;
+          state = IDLING;
+          mode = IDLING;
+        }
+        if (analogRead(SWITCH_PIN) > 512) {
+          mode = VOLGEN;
+          state = IDLING;
+        }
+        switch (state) {
+          case PAD_VOLGEN:
+            if ((distanceToF3 + distanceToF4) > MAX_PAD_WIDTH) {
+              positieLinks = 0;
+              positieRechts = 0;
               interval(4, 4);
-            }
-            if (done == 0) {
-              if (distancesonar4 < 12) {
-                if (!seeingTree4) {
-                  treesCounted++;
-                  seeingTree4 = true;
+              bochtRichting = LINKS;
+              padLengte = PAD_LENGTE + distanceToF4;
+              state = DOORRIJDEN;
+            } else {
+              if (distancesonar1 > afstandSonarVoor) {
+                digitalWrite(LED_PIN, LOW);
+                uint16_t offset = abs(distanceToF3 - gemiddeldeWaarde);
+                if (offset > 10) {
+                  if (offset > 20) {
+                    if (distanceToF3 < gemiddeldeWaarde) {
+                      interval(5, 3);
+                    } else {
+                      interval(3, 5);
+                    }
+                  } else {
+                    if (distanceToF3 < gemiddeldeWaarde) {
+                      interval(5, 4);
+                    } else {
+                      interval(4, 5);
+                    }
+                  }
+                } else {
+                  interval(4, 4);
+                }
+                if (countTrees) {
+                  if (done == 0) {
+                    if (distancesonar4 < 12) {
+                      if (!seeingTree4) {
+                        treesCounted++;
+                        seeingTree4 = true;
+                      }
+                    } else {
+                      if (seeingTree4) {
+                        seeingTree4 = false;
+                      }
+                    }
+                  }
+                  if (distancesonar2 < 12) {
+                    if (!seeingTree2) {
+                      treesCounted++;
+                      seeingTree2 = true;
+                    }
+                  } else {
+                    if (seeingTree2) {
+                      seeingTree2 = false;
+                    }
+                  }
                 }
               } else {
-                if (seeingTree4) {
-                  seeingTree4 = false;
+                interval(0, 0);
+                if ((millis() % 400) < 200) {
+                  digitalWrite(LED_PIN, HIGH);
+                } else {
+                  digitalWrite(LED_PIN, LOW);
                 }
               }
             }
-            if (distancesonar2 < 12) {
-              if (!seeingTree2) {
-                treesCounted++;
-                seeingTree2 = true;
+            break;
+          case DOORRIJDEN:
+            if (positieLinks >= DOORRIJ_LENGTE && positieRechts >= DOORRIJ_LENGTE) {
+              if (bochtRichting == LINKS) {
+                interval(0, 4);
+              } else {
+                interval(4, 0);
               }
-            } else {
-              if (seeingTree2) {
-                seeingTree2 = false;
+              positieRechts = 0;
+              positieLinks = 0;
+              state = BOCHT_MAKEN;
+              bochtStap = 1;
+            }
+            break;
+          case BOCHT_MAKEN:
+            if (bochtStap == 1) {
+              if (positieRechts >= BOCHT_LENGTE || positieLinks >= BOCHT_LENGTE) {
+                state = PAD_VOORBIJ;
+                positieRechts = 0;
+                positieLinks = 0;
+                interval(4, 4);
+              }
+            } else if (bochtStap == 2) {
+              if (positieRechts >= GROTE_BOCHT || positieLinks >= GROTE_BOCHT) {
+                state = PAD_INRIJDEN;
+                positieRechts = 0;
+                positieLinks = 0;
+                interval(4, 4);
               }
             }
-          } else {
-            interval(0, 0);
-            if ((millis() % 400) < 200) {
-              digitalWrite(LED_PIN, HIGH);
-            } else {
-              digitalWrite(LED_PIN, LOW);
+            break;
+          case PAD_VOORBIJ:
+            if (positieRechts >= padLengte && positieLinks >= padLengte) {
+              bochtStap = 2;
+              state = BOCHT_MAKEN;
+              positieLinks = 0;
+              positieRechts = 0;
+              bochtRichting = LINKS;
+              interval(10, 2);
             }
-          }
+            break;
+          case PAD_INRIJDEN:
+            if (distanceToF3 + distanceToF4 < MAX_PAD_WIDTH) {
+              state = PAD_VOLGEN;
+              done++;
+            }
+            break;
+          default:
+
+            break;
         }
         break;
-      case DOORRIJDEN:
-        if (positieLinks >= DOORRIJ_LENGTE && positieRechts >= DOORRIJ_LENGTE) {
-          if (bochtRichting == LINKS) {
-            interval(0, 4);
-          } else {
-            interval(4, 0);
-          }
-          positieRechts = 0;
-          positieLinks = 0;
-          state = BOCHT_MAKEN;
-          bochtStap = 1;
+      case VOLGEN:
+        if (analogRead(SWITCH_PIN) < 512) {
+          countTrees = false;
+          mode = AUTOMATISCH;
+          done = 0;
+          state = PAD_INRIJDEN;
+          interval(4, 4);
         }
+        
         break;
-      case BOCHT_MAKEN:
-        if (bochtStap == 1) {
-          if (positieRechts >= BOCHT_LENGTE || positieLinks >= BOCHT_LENGTE) {
-            state = PAD_VOORBIJ;
-            positieRechts = 0;
-            positieLinks = 0;
-            interval(4, 4);
-          }
-        } else if (bochtStap == 2) {
-          if (positieRechts >= GROTE_BOCHT || positieLinks >= GROTE_BOCHT) {
-            state = PAD_INRIJDEN;
-            positieRechts = 0;
-            positieLinks = 0;
-            interval(4, 4);
-          }
+      default:
+        if (analogRead(SWITCH_PIN) > 512) {
+          mode = VOLGEN;
         }
-        break;
-      case PAD_VOORBIJ:
-        if (positieRechts >= padLengte && positieLinks >= padLengte) {
-          bochtStap = 2;
-          state = BOCHT_MAKEN;
-          positieLinks = 0;
-          positieRechts = 0;
-          bochtRichting = LINKS;
-          interval(10, 2);
-          done++;
-        }
-        break;
-      case PAD_INRIJDEN:
-        if (distanceToF3 + distanceToF4 < MAX_PAD_WIDTH) {
-          state = PAD_VOLGEN;
-        }
-        break;
-      case IDLING:
         if (btState == CONNECTED) {
           if (bluetooth.available()) {
             if (bluetooth.read() == 10) {
@@ -310,12 +341,10 @@ void loop() {
               done = 0;
               state = PAD_VOLGEN;
               mode = AUTOMATISCH;
+              countTrees = true;
             }
           }
         }
-        break;
-      default:
-
         break;
     }
     if (analogRead(VOLTAGE_PIN) <= 10) {
