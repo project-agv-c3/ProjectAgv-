@@ -321,6 +321,36 @@ void loop() {
         }
         break;
       case VOLGEN:
+        if (distancesonar1 > 23) {
+          interval(0, 0);
+        } else if (distancesonar1 > 8) {//Vooruit volgen
+          uint16_t offset = abs(distanceToF3 - gemiddeldeWaarde);
+          if (offset > 10) {
+            if (offset > 20) {
+              if (distanceToF3 < gemiddeldeWaarde) {
+                interval(8, 5);
+              } else {
+                interval(5, 8);
+              }
+            } else {
+              if (distanceToF3 < gemiddeldeWaarde) {
+                interval(8, 6);
+              } else {
+                interval(6, 8);
+              }
+            }
+          } else {
+            interval(6, 6);
+          }
+        } else if (distancesonar1 < 6) {
+          if (distancesonar3 < afstandSonarVoor) {
+            interval(0, 0);
+          } else {
+            interval(-6, -6);
+          }
+        } else {
+          interval(0, 0);
+        }
         if (analogRead(SWITCH_PIN) < 512) {
           countTrees = false;
           mode = AUTOMATISCH;
@@ -328,7 +358,7 @@ void loop() {
           state = PAD_INRIJDEN;
           interval(4, 4);
         }
-        
+
         break;
       default:
         if (analogRead(SWITCH_PIN) > 512) {
@@ -381,9 +411,11 @@ void sendStatus() {
       if (millis() - previousMillisStatus >= 20) {
         if (mode == AUTOMATISCH) {
           bluetooth.write(1);
-        } else if (mode == VOLGEN) {
+        }
+        if (mode == VOLGEN) {
           bluetooth.write(2);
-        } else {
+        }
+        if (mode == IDLING) {
           bluetooth.write(3);
         }
         nextStatus = TREES;
@@ -397,7 +429,7 @@ void sendStatus() {
       break;
     case BATTERY:
       if (millis() - previousMillisStatus >= 60) {
-        bluetooth.write(map(constrain(analogRead(VOLTAGE_PIN), 855, 1003), 855, 1003, 100, 130) - 30);
+        bluetooth.write(119 - 30);//map(constrain(analogRead(VOLTAGE_PIN), 855, 1003), 855, 1003, 100, 130) - 30);
         nextStatus = MODE;
         previousMillisStatus = millis();
       }
