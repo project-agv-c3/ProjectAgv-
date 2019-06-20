@@ -195,7 +195,7 @@ void loop() {
 
     switch (mode) {
       case AUTOMATISCH:
-        if (done == 2) {
+        if (done >= 2) {
           interval(0, 0);
           done = 0;
           state = IDLING;
