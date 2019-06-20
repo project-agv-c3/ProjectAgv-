@@ -25,6 +25,7 @@
 #define TX_PIN A3
 #define RX_PIN A2
 #define LED_PIN 11
+#define PIEZO_PIN 10
 
 #define MAX_PAD_WIDTH 250
 #define DOORRIJ_LENGTE 600
@@ -138,7 +139,7 @@ int8_t intervalStepperLinks = 0;
 int8_t intervalStepperRechts = 0;
 #define intervalLaagzetten 1
 
-uint8_t mode = AUTOMATISCH;
+uint8_t mode = IDLING;
 uint8_t bochtStap = 1;
 uint8_t state = IDLING;
 boolean emergency = false;
@@ -162,7 +163,9 @@ void setup() {
   pinMode(dirPinLinks, OUTPUT);
   pinMode(stepPinRechts, OUTPUT);
   pinMode(dirPinRechts, OUTPUT);
-  state = PAD_VOLGEN;
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(PIEZO_PIN, OUTPUT);
+  state = IDLING;
   bluetooth.write(INIT_DATA);
   ToFs_init();          //Initializeer de time of flight sensoren
   TCCR2A = 0b00000000;  //
@@ -291,11 +294,11 @@ void loop() {
           positieRechts = 0;
           bochtRichting = LINKS;
           interval(10, 2);
+          done++;
         }
         break;
       case PAD_INRIJDEN:
         if (distanceToF3 + distanceToF4 < MAX_PAD_WIDTH) {
-          done++;
           state = PAD_VOLGEN;
         }
         break;
@@ -318,16 +321,22 @@ void loop() {
     if (analogRead(VOLTAGE_PIN) <= 10) {
       interval(0, 0);
       emergency = true;
-      bluetooth.write(101);
+      if (btState == CONNECTED) {
+        bluetooth.write(101);
+      }
     }
   } else {
-    if (millis() - previousMillisStatus >= 50) {
-      bluetooth.write(101); //Blijf zeggen dat de AGV in emergency is
-      previousMillisStatus = millis();
+    if (btState == CONNECTED) {
+      if (millis() - previousMillisStatus >= 50) {
+        bluetooth.write(101); //Blijf zeggen dat de AGV in emergency is
+        previousMillisStatus = millis();
+      }
     }
     if (analogRead(VOLTAGE_PIN) > 10) {
       emergency = false;
-      bluetooth.write(102);
+      if (btState == CONNECTED) {
+        bluetooth.write(102);
+      }
     }
   }
 }

@@ -57,121 +57,121 @@ void setup() {
 
 void draw() {
   switch (state) {
-    case 1:  //Select your AGV
-      background(backColor);
-      stroke(strokeColor);
-      strokeWeight(9);
+  case 1:  //Select your AGV
+    background(backColor);
+    stroke(strokeColor);
+    strokeWeight(9);
+    fill(fillColor);
+    rect(0, 0, width, 180);
+    fill(strokeColor);
+    text("Select your AGV:", 540, 90);
+    for (int i = 0; i < names.length; i++) {
       fill(fillColor);
-      rect(0, 0, width, 180);
+      rect(90, 250 + i * 290, 900, 200, 10);
       fill(strokeColor);
-      text("Select your AGV:", 540, 90);
+      text(names[i], width / 2, 350 + i * 290);
+    }
+    if (lastMouse.x >= 90 && lastMouse.x <= 990) {
       for (int i = 0; i < names.length; i++) {
-        fill(fillColor);
-        rect(90, 250 + i * 290, 900, 200, 10);
-        fill(strokeColor);
-        text(names[i], width / 2, 350 + i * 290);
-      }
-      if (lastMouse.x >= 90 && lastMouse.x <= 990) {
-        for (int i = 0; i < names.length; i++) {
-          if (lastMouse.y >= 250 + i * 290 && lastMouse.y <= 450 + i * 290) {
-            lastMouse.set(0, 0);
-            selected = i;
-            deviceName = names[i];
-            state = 2;
-          }
-        }
-      }
-      break;
-    case 2:  //Create the connection
-      background(backColor);
-      stroke(strokeColor);
-      strokeWeight(5);
-      fill(overColor);
-      rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
-      fill(strokeColor);
-      text("Connecting", width / 2, height / 2 - 70);
-      text("to device...", width / 2, height / 2 + 70);
-      bt.connectToDeviceByName(names[selected]);
-      state = 3;
-      break;
-    case 3:  //Wait for a confirmation of connection
-      background(backColor);
-      stroke(strokeColor);
-      strokeWeight(5);
-      fill(overColor);
-      rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
-      fill(strokeColor);
-      text("Connecting", width / 2, height / 2 - 70);
-      text("to device...", width / 2, height / 2 + 70);
-      break;
-    case 4:
-    case 5:  //Emergency
-      background(backColor);
-      stroke(strokeColor);
-      strokeWeight(9);
-      fill(fillColor);
-      rect(0, 0, width, 180);/////////////////////////////////////////////
-      fill(strokeColor);
-      textAlign(CENTER, CENTER);
-      text(deviceName, width / 2, 90);
-      textAlign(LEFT, CENTER);
-      image(modeLogo, 25, 205);
-      text("Mode:  " + sMode, 250, 305);
-      line(0, 430, width, 430);///////////////////////////////////////////
-      image(treeLogo, 25, 455);
-      text("Trees counted:  " + sTrees, 250, 555);
-      line(0, 680, width, 680);///////////////////////////////////////////
-      image(batteryLogo, 25, 705);
-      text("Battery voltage:  " + sBattery, 250, 805);
-      line(0, 930, width, 930);///////////////////////////////////////////
-      image(scanLogo, 25, 955);
-      if (mode == 0) {
-        text("Perform scan", 250, 1055);
-        if (lastMouse.y >= 930 && lastMouse.y <= 1180) {
+        if (lastMouse.y >= 250 + i * 290 && lastMouse.y <= 450 + i * 290) {
           lastMouse.set(0, 0);
-          send(10);
-        }
-      } else if (mode == 1) {
-        text("Scanning...", 250, 1055);
-        pushMatrix();
-        translate(125, 1055);
-        rotate(radians(angle));
-        line(0, 0, 0, 90);
-        popMatrix();
-        angle += 3;
-        if (angle >= 360) {
-          angle -= 360;
+          selected = i;
+          deviceName = names[i];
+          state = 2;
         }
       }
-      line(0, 1180, width, 1180);//////////////////////////////////////////
-      if (state == 5) {
-        strokeWeight(5);
-        fill(emerbackColor);
-        rect(100, 200, width - 200, height - 400, 10);
-        textAlign(CENTER, CENTER);
-        emerColor += emergency;
-        if (emerColor >= 255) {
-          emergency = -6;
-        } else if (emerColor <= 255 - 6 * 15) {
-          emergency = 6;
-        }
-        fill(emerColor, 0, 0);
-        textSize(90);
-        text("Emergency\nwarning!", width / 2, 400);
-        text("Emergency\nwarning!", width / 2, height - 400);
-        textSize(70);
-        fill(220, 0, 0);
-        text("The emergency \n button on the \n AGV has been \n pressed. Please go \n and check to \n see if the area \n is safe again.", width / 2, height / 2);
-        createWarning(emerColor);
-        image(warnLogo, 160, 320);
-        image(warnLogo, width - 320, 320);
-        image(warnLogo, 160, height - 480);
-        image(warnLogo, width - 320, height - 480);
+    }
+    break;
+  case 2:  //Create the connection
+    background(backColor);
+    stroke(strokeColor);
+    strokeWeight(5);
+    fill(overColor);
+    rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
+    fill(strokeColor);
+    text("Connecting", width / 2, height / 2 - 70);
+    text("to device...", width / 2, height / 2 + 70);
+    bt.connectToDeviceByName(names[selected]);
+    state = 3;
+    break;
+  case 3:  //Wait for a confirmation of connection
+    background(backColor);
+    stroke(strokeColor);
+    strokeWeight(5);
+    fill(overColor);
+    rect(width / 2 - 300, height / 2 - 160, 600, 320, 10);
+    fill(strokeColor);
+    text("Connecting", width / 2, height / 2 - 70);
+    text("to device...", width / 2, height / 2 + 70);
+    break;
+  case 4:
+  case 5:  //Emergency
+    background(backColor);
+    stroke(strokeColor);
+    strokeWeight(9);
+    fill(fillColor);
+    rect(0, 0, width, 180);/////////////////////////////////////////////
+    fill(strokeColor);
+    textAlign(CENTER, CENTER);
+    text(deviceName, width / 2, 90);
+    textAlign(LEFT, CENTER);
+    image(modeLogo, 25, 205);
+    text("Mode:  " + sMode, 250, 305);
+    line(0, 430, width, 430);///////////////////////////////////////////
+    image(treeLogo, 25, 455);
+    text("Trees counted:  " + sTrees, 250, 555);
+    line(0, 680, width, 680);///////////////////////////////////////////
+    image(batteryLogo, 25, 705);
+    text("Battery voltage:  " + sBattery, 250, 805);
+    line(0, 930, width, 930);///////////////////////////////////////////
+    image(scanLogo, 25, 955);
+    if (mode == 0) {
+      text("Perform scan", 250, 1055);
+      if (lastMouse.y >= 930 && lastMouse.y <= 1180) {
+        lastMouse.set(0, 0);
+        send(10);
       }
-      break;
-    default:
-      //Do nothing
-      break;
+    } else if (mode == 1) {
+      text("Scanning...", 250, 1055);
+      pushMatrix();
+      translate(125, 1055);
+      rotate(radians(angle));
+      line(0, 0, 0, 90);
+      popMatrix();
+      angle += 3;
+      if (angle >= 360) {
+        angle -= 360;
+      }
+    }
+    line(0, 1180, width, 1180);//////////////////////////////////////////
+    if (state == 5) {
+      strokeWeight(5);
+      fill(emerbackColor);
+      rect(100, 200, width - 200, height - 400, 10);
+      textAlign(CENTER, CENTER);
+      emerColor += emergency;
+      if (emerColor >= 255) {
+        emergency = -6;
+      } else if (emerColor <= 255 - 6 * 15) {
+        emergency = 6;
+      }
+      fill(emerColor, 0, 0);
+      textSize(90);
+      text("Emergency\nwarning!", width / 2, 400);
+      text("Emergency\nwarning!", width / 2, height - 400);
+      textSize(70);
+      fill(220, 0, 0);
+      text("The emergency \n button on the \n AGV has been \n pressed. Please go \n and check to \n see if the area \n is safe again.", width / 2, height / 2);
+      createWarning(emerColor);
+      image(warnLogo, 160, 320);
+      image(warnLogo, width - 320, 320);
+      image(warnLogo, 160, height - 480);
+      image(warnLogo, width - 320, height - 480);
+    }
+    break;
+  default:
+    //Do nothing
+    break;
   }
 }
 
@@ -181,44 +181,46 @@ void send(int _data) {
 }
 
 void mouseReleased() {
-  lastMouse.set(mouseX, mouseY);
+  if (state != 5) {
+    lastMouse.set(mouseX, mouseY);
+  }
 }
 
 void onBluetoothDataEvent(String who, byte[] _data) {
   byte data = _data[0];
   switch (state) {
-    case 3:
-      if (data == 7) {
-        state = 4;
-        send(8);
-      }
-      break;
-    case 4:
-      if (data == 101) {
-        state = 5;
-      } else if (data >= 70 && data <= 100) {//Values 70 to 100 are battery voltages
-        sBattery = str((data + 30) / 10) + "," + str((data + 30) % 10) + " V";
-      } else if (data >= -128 && data <= -1) {//Values -128 to -1 are numbers of trees (+128)
-        sTrees = str(data + 128);
-      } else if (data ==  1) {
-        mode = 1;
-        sMode = "Automatic";
-      } else if (data == 2) {
-        mode = 2;
-        sMode = "Follow";
-      } else if (data == 3) {
-        mode = 0;
-        sMode = "Idle";
-      }
-      break;
-    case 5:
-      if (data != 101) {
-        state = 4;
-      }
-      break;
-    default:
-      //Do nothing
-      break;
+  case 3:
+    if (data == 7) {
+      state = 4;
+      send(8);
+    }
+    break;
+  case 4:
+    if (data == 101) {
+      state = 5;
+    } else if (data >= 70 && data <= 100) {//Values 70 to 100 are battery voltages
+      sBattery = str((data + 30) / 10) + "," + str((data + 30) % 10) + " V";
+    } else if (data >= -128 && data <= -1) {//Values -128 to -1 are numbers of trees (+128)
+      sTrees = str(data + 128);
+    } else if (data ==  1) {
+      mode = 1;
+      sMode = "Automatic";
+    } else if (data == 2) {
+      mode = 2;
+      sMode = "Follow";
+    } else if (data == 3) {
+      mode = 0;
+      sMode = "Idle";
+    }
+    break;
+  case 5:
+    if (data != 101) {
+      state = 4;
+    }
+    break;
+  default:
+    //Do nothing
+    break;
   }
 }
 
